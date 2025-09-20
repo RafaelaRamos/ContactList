@@ -12,14 +12,16 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.recyclerview.widget.LinearLayoutManager
 import br.edu.scl.ifsp.sdm.contactlist.R
 import br.edu.scl.ifsp.sdm.contactlist.adapter.ContactAdapter
+import br.edu.scl.ifsp.sdm.contactlist.adapter.ContactRvAdapter
 import br.edu.scl.ifsp.sdm.contactlist.databinding.ActivityMainBinding
 import br.edu.scl.ifsp.sdm.contactlist.model.Constant.EXTRA_CONTACT
 import br.edu.scl.ifsp.sdm.contactlist.model.Constant.EXTRA_VIEW_CONTACT
 import br.edu.scl.ifsp.sdm.contactlist.model.Contact
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), OnContactClickListener {
     private val amb: ActivityMainBinding by lazy {
         ActivityMainBinding.inflate(layoutInflater)
     }
@@ -27,10 +29,14 @@ class MainActivity : AppCompatActivity() {
     // Data source
     private val concatList: MutableList<Contact> = mutableListOf()
 
-    //adapter
-    private val contactAdapter: ContactAdapter by lazy {
-        ContactAdapter(this, concatList)
+    //adapter listView
+    // private val contactAdapter: ContactAdapter by lazy {
+    //   ContactAdapter(this, concatList)
+    // }
+    private val contactAdapter: ContactRvAdapter by lazy {
+        ContactRvAdapter(concatList, this)
     }
+
     private lateinit var carl: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,25 +54,20 @@ class MainActivity : AppCompatActivity() {
                             val position =
                                 concatList.indexOfFirst { it.id == newOreditedContact.id }
                             concatList[position] = newOreditedContact
+                            contactAdapter.notifyItemChanged(position)
 
                         } else {
                             concatList.add(newOreditedContact)
+                            contactAdapter.notifyItemInserted(concatList.lastIndex)
                         }
-                        contactAdapter.notifyDataSetChanged()
+
                     }
                 }
             }
         fillContacts()
-        amb.contactLv.adapter = contactAdapter
-        registerForContextMenu(amb.contactLv)
+        amb.contactRv.adapter = contactAdapter
+        amb.contactRv.layoutManager = LinearLayoutManager(this)
 
-        amb.contactLv.setOnItemClickListener() { parent, view, position, id ->
-            startActivity(Intent(this, ContactActivity::class.java).apply {
-                putExtra(EXTRA_CONTACT, concatList[position])
-                putExtra(EXTRA_VIEW_CONTACT,true)
-            })
-
-        }
 
     }
 
@@ -88,40 +89,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreateContextMenu(
-        menu: ContextMenu?,
-        v: View?,
-        menuInfo: ContextMenu.ContextMenuInfo?
-    ) {
-        menuInflater.inflate(R.menu.context_menu_main, menu)
-    }
 
-    override fun onContextItemSelected(item: MenuItem): Boolean {
-        val position = (item.menuInfo as AdapterContextMenuInfo).position
-        return when (item.itemId) {
-            R.id.removeContactMi -> {
-                concatList.removeAt(position)
-                contactAdapter.notifyDataSetChanged()
-                Toast.makeText(this, getString(R.string.remove_contact), Toast.LENGTH_SHORT).show()
-                true
-            }
-
-            R.id.editContactMi -> {
-                carl.launch(Intent(this, ContactActivity::class.java).apply {
-                    putExtra(EXTRA_CONTACT, concatList[position])
-                })
-                true
-            }
-
-            else -> {
-                false
-            }
-        }
-    }
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterForContextMenu(amb.contactLv)
+
+    }
+
+    override fun onContactClick(position: Int) {
+        Intent(this, ContactActivity::class.java).apply {
+            putExtra(EXTRA_CONTACT, concatList[position])
+            putExtra(EXTRA_VIEW_CONTACT, true)
+        }.also {
+            startActivity(it)
+        }
+    }
+
+    override fun onRemoveContactMenuItemClick(position: Int) {
+        concatList.removeAt(position)
+        contactAdapter.notifyItemRemoved(position)
+        Toast.makeText(this, getString(R.string.remove_contact), Toast.LENGTH_SHORT).show()
+
+    }
+
+    override fun onEditContactMenuEditClick(position: Int) {
+        carl.launch(Intent(this, ContactActivity::class.java).apply {
+            putExtra(EXTRA_CONTACT, concatList[position])
+        })
     }
 
     private fun fillContacts() {
@@ -129,4 +123,6 @@ class MainActivity : AppCompatActivity() {
             concatList.add(Contact(i, "Nome$i", "address$i", "telefone$i", "email$i"))
         }
     }
+
+
 }
