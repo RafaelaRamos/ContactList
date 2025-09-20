@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity(), OnContactClickListener {
 
     private fun fillContacts() {
         for (i in 1..10) {
-            concatList.add(Contact(i, "Nome$i", "address$i", "telefone$i", "email$i"))
+            concatList.add(Contact(i, "Nome $i", "address $i", "telefone $i", "email $i"))
         }
     }
 
